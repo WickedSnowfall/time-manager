@@ -1,2 +1,3 @@
-# time-manager
-Program for calculating working hours
+# Time Manager
+
+Simple full-stack time tracking app.
