@@ -111,8 +111,7 @@ coverage.xml
 # =========================
 # Optional lockfiles
 # =========================
-# Якщо хочеш комітити lockfile фронтенду — залиш як є.
-# Якщо не хочеш — розкоментуй один із рядків нижче.
+# front lockfile commit
 
 # frontend/package-lock.json
 # frontend/yarn.lock
