@@ -45,11 +45,6 @@ frontend/dist/
 frontend/.vite/
 frontend/coverage/
 frontend/.eslintcache
-frontend/.parcel-cache/
-frontend/.turbo/
-frontend/.next/
-
-# TypeScript
 frontend/*.tsbuildinfo
 
 # =========================
@@ -65,13 +60,9 @@ backend/htmlcov/
 backend/.hypothesis/
 backend/.nox/
 backend/.tox/
-
-# Virtual environments
 backend/.venv/
 backend/venv/
 backend/env/
-
-# Python packaging
 backend/build/
 backend/dist/
 backend/*.egg-info/
@@ -89,30 +80,6 @@ backend/.eggs/
 tmp/
 temp/
 .cache/
-
-# =========================
-# Runtime / uploads / generated files
-# =========================
 uploads/
 media/
 staticfiles/
-
-# =========================
-# Alembic / migrations cache
-# =========================
-backend/alembic/__pycache__/
-
-# =========================
-# Testing artifacts
-# =========================
-.coverage
-coverage.xml
-
-# =========================
-# Optional lockfiles
-# =========================
-# front lockfile commit
-
-# frontend/package-lock.json
-# frontend/yarn.lock
-# frontend/pnpm-lock.yaml
