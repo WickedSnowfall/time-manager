@@ -1,6 +1,6 @@
 # Time Manager
 
-Full-stack application for tracking working hours.
+AI maded Full-stack application for tracking working hours.
 
 ## Stack
 
