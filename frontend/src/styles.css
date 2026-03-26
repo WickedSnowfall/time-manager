@@ -28,6 +28,11 @@ textarea {
   padding: 24px;
 }
 
+.auth-shell {
+  display: grid;
+  place-items: center;
+}
+
 .app-container {
   max-width: 860px;
   margin: 0 auto;
@@ -38,11 +43,23 @@ textarea {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  gap: 16px;
+}
+
+.user-badge {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
 }
 
 h1,
 h2,
-h3 {
+h3,
+p {
   margin: 0;
 }
 
@@ -101,7 +118,8 @@ h3 {
   border-radius: 16px;
 }
 
-.primary-button:disabled {
+.primary-button:disabled,
+.secondary-button:disabled {
   opacity: 0.8;
   cursor: default;
 }
@@ -200,7 +218,8 @@ tbody tr:hover {
 }
 
 .modal-card,
-.settings-card {
+.settings-card,
+.auth-card {
   display: grid;
   gap: 14px;
 }
@@ -211,6 +230,42 @@ tbody tr:hover {
   color: var(--text);
   border-radius: 24px;
   padding: 24px;
+}
+
+.auth-card {
+  width: min(100%, 520px);
+}
+
+.auth-brand {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.auth-brand p {
+  color: color-mix(in srgb, var(--text) 70%, transparent 30%);
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-tabs {
+  margin-bottom: 0;
+}
+
+.centered-message {
+  width: min(100%, 420px);
+  text-align: center;
+}
+
+.banner-error,
+.form-error {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
 }
 
 label {
@@ -237,15 +292,11 @@ textarea {
 
 .color-input-row input[type="color"] {
   width: 56px;
-  height: 40px;
+  height: 44px;
+  min-width: 56px;
   padding: 4px;
   border-radius: 10px;
   cursor: pointer;
-}
-
-.color-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  opacity: 0.85;
 }
 
 textarea {
@@ -254,7 +305,8 @@ textarea {
 }
 
 .modal-actions,
-.settings-header {
+.settings-header,
+.settings-actions {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -263,6 +315,11 @@ textarea {
 .settings-header {
   justify-content: space-between;
   margin-bottom: 4px;
+}
+
+.settings-actions {
+  justify-content: space-between;
+  margin-top: 8px;
 }
 
 @media (max-width: 640px) {
@@ -274,46 +331,11 @@ textarea {
     padding: 18px;
     border-radius: 24px;
   }
-}
 
-
-.flash-message {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-}
-
-.flash-message.success {
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--text);
-}
-
-.flash-message.error {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--text);
-}
-
-.flash-close {
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-}
-
-.field-hint {
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.78;
-}
-
-.hex-input {
-  min-width: 130px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  .settings-actions,
+  .modal-actions,
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

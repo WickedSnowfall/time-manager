@@ -2,7 +2,31 @@ export type Page = "home" | "history" | "settings";
 export type Language = "uk" | "en";
 export type ThemeMode = "light" | "dark" | "system" | "custom";
 export type Status = "worked" | "vacation" | "day_off" | "sick_leave" | "custom";
-export type FlashType = "success" | "error";
+export type AuthMode = "login" | "register";
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface LoginPayload {
+  identifier: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+}
 
 export interface ActiveSession {
   active: boolean;
@@ -38,7 +62,6 @@ export type ColorPreferenceKey =
 
 export interface EntriesResponse {
   items: Entry[];
-  summary_seconds: number;
   summary_label: string;
 }
 
@@ -47,9 +70,4 @@ export interface UpdateEntryPayload {
   is_override: boolean;
   status: Status;
   note: string;
-}
-
-export interface FlashMessage {
-  type: FlashType;
-  text: string;
 }

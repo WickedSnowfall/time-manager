@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { ColorPreferenceKey, Language, Preferences, ThemeMode } from "../types";
@@ -10,6 +10,7 @@ interface SettingsPageProps {
   setPreferences: Dispatch<SetStateAction<Preferences>>;
   onSave: (next: Preferences) => Promise<void>;
   onBack: () => void;
+  onLogout: () => void;
   t: Messages;
 }
 
@@ -18,32 +19,22 @@ export function SettingsPage({
   setPreferences,
   onSave,
   onBack,
+  onLogout,
   t,
 }: SettingsPageProps) {
   const [saving, setSaving] = useState(false);
-  const colorFields: Array<{ key: ColorPreferenceKey; label: string }> = useMemo(
-    () => [
-      { key: "primary_color", label: t.primary },
-      { key: "background_color", label: t.background },
-      { key: "surface_color", label: t.surface },
-      { key: "text_color", label: t.text },
-    ],
-    [t.background, t.primary, t.surface, t.text],
-  );
+  const colorFields: Array<{ key: ColorPreferenceKey; label: string }> = [
+    { key: "primary_color", label: t.primary },
+    { key: "background_color", label: t.background },
+    { key: "surface_color", label: t.surface },
+    { key: "text_color", label: t.text },
+  ];
 
   function updateColorPreference(key: ColorPreferenceKey, value: string) {
     setPreferences((prev) => ({
       ...prev,
       theme_mode: "custom",
       [key]: normalizeHexColor(value, prev[key]),
-    }));
-  }
-
-  function updateColorText(key: ColorPreferenceKey, value: string) {
-    setPreferences((prev) => ({
-      ...prev,
-      theme_mode: "custom",
-      [key]: value,
     }));
   }
 
@@ -103,26 +94,26 @@ export function SettingsPage({
                 type="color"
                 value={safeColor}
                 onChange={(e) => updateColorPreference(key, e.target.value)}
-                aria-label={label}
               />
               <input
                 type="text"
                 value={preferences[key]}
-                onChange={(e) => updateColorText(key, e.target.value)}
-                onBlur={(e) => updateColorPreference(key, e.target.value)}
-                placeholder="#112233"
-                className="hex-input"
+                onChange={(e) => updateColorPreference(key, e.target.value)}
+                spellCheck={false}
               />
             </div>
           </label>
         );
       })}
 
-      <p className="field-hint">{t.customThemeHint}</p>
-
-      <button className="primary-button" onClick={submit} disabled={saving}>
-        {t.save}
-      </button>
+      <div className="settings-actions">
+        <button className="secondary-button" onClick={onLogout}>
+          {t.logout}
+        </button>
+        <button className="primary-button" onClick={submit} disabled={saving}>
+          {saving ? t.loading : t.save}
+        </button>
+      </div>
     </section>
   );
 }

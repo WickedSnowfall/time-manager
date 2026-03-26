@@ -13,6 +13,9 @@ class Settings:
     database_url: str
     cors_origins: tuple[str, ...]
     retention_days: int
+    jwt_secret_key: str
+    jwt_algorithm: str
+    access_token_expire_minutes: int
 
 
 def _split_csv(value: str) -> tuple[str, ...]:
@@ -21,9 +24,12 @@ def _split_csv(value: str) -> tuple[str, ...]:
 
 
 settings = Settings(
-    database_url=os.getenv("DATABASE_URL", "sqlite:///./time_manager.db"),
+    database_url=os.getenv("DATABASE_URL", "sqlite:///./timemanager.db"),
     cors_origins=_split_csv(
         os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
     ),
     retention_days=int(os.getenv("RETENTION_DAYS", "183")),
+    jwt_secret_key=os.getenv("JWT_SECRET_KEY", "change-me-in-production"),
+    jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+    access_token_expire_minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")),
 )

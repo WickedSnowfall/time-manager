@@ -1,3 +1,3 @@
-from . import entries, preferences, sessions
+from . import auth, entries, preferences, sessions
 
-__all__ = ["entries", "preferences", "sessions"]
+__all__ = ["auth", "entries", "preferences", "sessions"]

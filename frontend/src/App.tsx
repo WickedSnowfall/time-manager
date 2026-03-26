@@ -1,25 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TouchEvent } from "react";
 
-import { api } from "./api";
+import { api, clearAccessToken, getAccessToken } from "./api";
+import { AuthPage } from "./components/AuthPage";
 import { EditEntryModal } from "./components/EditEntryModal";
 import { HistorySection } from "./components/HistorySection";
 import { HomeSection } from "./components/HomeSection";
 import { SettingsPage } from "./components/SettingsPage";
 import { dictionary } from "./i18n";
 import { applyTheme, defaultPreferences, sanitizePreferences } from "./lib/theme";
-import { formatDisplayHHMM, formatDuration, localDateISO, parseHHMMToSeconds } from "./lib/time";
-import type { ActiveSession, Entry, FlashMessage, Page, Preferences, Status } from "./types";
-
-function asErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-  return fallback;
-}
+import { localDateISO, parseHHMMToSeconds } from "./lib/time";
+import type {
+  ActiveSession,
+  AuthMode,
+  Entry,
+  Page,
+  Preferences,
+  Status,
+  User,
+} from "./types";
 
 export default function App() {
   const [page, setPage] = useState<Page>("home");
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [booting, setBooting] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   const [activeSession, setActiveSession] = useState<ActiveSession>({
     active: false,
     session_id: null,
@@ -35,18 +43,14 @@ export default function App() {
   const [editStatus, setEditStatus] = useState<Status>("worked");
   const [editNote, setEditNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<FlashMessage | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
 
   const language = preferences.language;
   const t = dictionary[language];
 
-  function showMessage(next: FlashMessage) {
-    setMessage(next);
-  }
-
-  function clearMessage() {
-    setMessage(null);
+  async function bootstrapAuthenticatedApp() {
+    await Promise.all([loadActive(), loadEntries(filterMonths), loadPreferences()]);
   }
 
   async function loadActive() {
@@ -64,28 +68,52 @@ export default function App() {
   }
 
   useEffect(() => {
-    const boot = async () => {
-      try {
-        await Promise.all([loadActive(), loadEntries(filterMonths), loadPreferences()]);
-      } catch (error) {
-        showMessage({ type: "error", text: asErrorMessage(error, t.requestFailed) });
-      }
-    };
+    applyTheme(preferences);
+  }, [preferences]);
 
-    void boot();
+  useEffect(() => {
+    if (preferences.theme_mode !== "system") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncWithSystemTheme = () => applyTheme(preferences);
+    media.addEventListener("change", syncWithSystemTheme);
+    return () => media.removeEventListener("change", syncWithSystemTheme);
+  }, [preferences]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initialize() {
+      const token = getAccessToken();
+      if (!token) {
+        if (!cancelled) setBooting(false);
+        return;
+      }
+
+      try {
+        const user = await api.me();
+        if (cancelled) return;
+        setAuthUser(user);
+        await bootstrapAuthenticatedApp();
+      } catch {
+        clearAccessToken();
+        if (!cancelled) setAuthUser(null);
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    }
+
+    void initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    const syncEntries = async () => {
-      try {
-        await loadEntries(filterMonths);
-      } catch (error) {
-        showMessage({ type: "error", text: asErrorMessage(error, t.requestFailed) });
-      }
-    };
-
-    void syncEntries();
-  }, [filterMonths]);
+    if (!authUser) return;
+    void loadEntries(filterMonths);
+  }, [filterMonths, authUser]);
 
   useEffect(() => {
     if (!activeSession.active) return;
@@ -100,53 +128,64 @@ export default function App() {
     return () => clearInterval(timer);
   }, [activeSession.active]);
 
-  useEffect(() => {
-    applyTheme(preferences);
-  }, [preferences]);
-
-  useEffect(() => {
-    if (preferences.theme_mode !== "system") return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncWithSystemTheme = () => applyTheme(preferences);
-    media.addEventListener("change", syncWithSystemTheme);
-    return () => media.removeEventListener("change", syncWithSystemTheme);
-  }, [preferences]);
-
-  useEffect(() => {
-    if (!message) return;
-
-    const timeout = window.setTimeout(() => setMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [message]);
-
   const today = localDateISO();
   const todayEntry = useMemo(() => entries.find((i) => i.day === today), [entries, today]);
-  const liveTodayHours = useMemo(() => {
-    const activeTodaySeconds = activeSession.active && activeSession.start_time?.slice(0, 10) === today
-      ? activeSession.elapsed_seconds
-      : 0;
-    const totalSeconds = (todayEntry?.total_seconds ?? 0) + activeTodaySeconds;
-    return formatDisplayHHMM(totalSeconds);
-  }, [activeSession.active, activeSession.elapsed_seconds, activeSession.start_time, today, todayEntry?.total_seconds]);
+
+  async function handleLogin(payload: { identifier: string; password: string }) {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const response = await api.login(payload);
+      setAuthUser(response.user);
+      await bootstrapAuthenticatedApp();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setAuthBusy(false);
+      setBooting(false);
+    }
+  }
+
+  async function handleRegister(payload: { username: string; email: string; password: string }) {
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const response = await api.register(payload);
+      setAuthUser(response.user);
+      await bootstrapAuthenticatedApp();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Registration failed");
+    } finally {
+      setAuthBusy(false);
+      setBooting(false);
+    }
+  }
+
+  function handleLogout() {
+    clearAccessToken();
+    setAuthUser(null);
+    setEntries([]);
+    setSummaryLabel("0 h 00 m");
+    setActiveSession({ active: false, session_id: null, start_time: null, elapsed_seconds: 0 });
+    setPreferences(defaultPreferences);
+    setPage("home");
+  }
 
   async function toggleSession() {
     if (busy) return;
 
     setBusy(true);
-    clearMessage();
+    setRequestError(null);
     try {
       if (activeSession.active) {
         await api.stopSession();
-        showMessage({ type: "success", text: t.sessionStopped });
       } else {
         await api.startSession();
-        showMessage({ type: "success", text: t.sessionStarted });
       }
 
       await Promise.all([loadActive(), loadEntries(filterMonths)]);
     } catch (error) {
-      showMessage({ type: "error", text: asErrorMessage(error, t.requestFailed) });
+      setRequestError(error instanceof Error ? error.message : "Request failed");
     } finally {
       setBusy(false);
     }
@@ -157,7 +196,6 @@ export default function App() {
     setEditHours(entry.hours);
     setEditStatus(entry.status);
     setEditNote(entry.note);
-    clearMessage();
   }
 
   async function saveEdit() {
@@ -165,7 +203,7 @@ export default function App() {
 
     const overrideSeconds = parseHHMMToSeconds(editHours);
     if (overrideSeconds === null) {
-      showMessage({ type: "error", text: t.invalidTime });
+      setRequestError("Invalid time format");
       return;
     }
 
@@ -179,20 +217,18 @@ export default function App() {
 
       setEditing(null);
       await loadEntries(filterMonths);
-      showMessage({ type: "success", text: t.entrySaved });
     } catch (error) {
-      showMessage({ type: "error", text: asErrorMessage(error, t.requestFailed) });
+      setRequestError(error instanceof Error ? error.message : "Save failed");
     }
   }
 
   async function savePreferences(next: Preferences) {
-    const payload = sanitizePreferences(next);
+    setRequestError(null);
     try {
-      const saved = sanitizePreferences(await api.savePreferences(payload));
-      setPreferences(saved);
-      showMessage({ type: "success", text: t.settingsSaved });
+      const payload = sanitizePreferences(next);
+      setPreferences(sanitizePreferences(await api.savePreferences(payload)));
     } catch (error) {
-      showMessage({ type: "error", text: asErrorMessage(error, t.requestFailed) });
+      setRequestError(error instanceof Error ? error.message : "Settings save failed");
     }
   }
 
@@ -213,24 +249,42 @@ export default function App() {
     if (delta > 0) setPage("home");
   }
 
+  if (booting) {
+    return (
+      <main className="app-shell auth-shell">
+        <div className="auth-card card centered-message">{t.loading}</div>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <AuthPage
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        loading={authBusy}
+        error={authError}
+        t={t}
+      />
+    );
+  }
+
   return (
     <main className="app-shell" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="app-container">
         <header className="topbar">
-          <h1>{t.title}</h1>
+          <div>
+            <h1>{t.title}</h1>
+            <div className="user-badge">{t.hello}, {authUser.username}</div>
+          </div>
           <button className="icon-button" onClick={() => setPage("settings")} aria-label={t.settings}>
             ⚙
           </button>
         </header>
 
-        {message && (
-          <div className={`flash-message ${message.type}`} role="status">
-            <span>{message.text}</span>
-            <button className="flash-close" onClick={clearMessage} aria-label={t.closeMessage}>
-              ×
-            </button>
-          </div>
-        )}
+        {requestError && <div className="banner-error">{requestError}</div>}
 
         {page !== "settings" && (
           <nav className="tabs">
@@ -247,7 +301,7 @@ export default function App() {
           <HomeSection
             activeSession={activeSession}
             busy={busy}
-            todayHours={liveTodayHours}
+            todayHours={todayEntry ? todayEntry.hours : "00:00"}
             onToggleSession={toggleSession}
             t={t}
           />
@@ -271,6 +325,7 @@ export default function App() {
             setPreferences={setPreferences}
             onSave={savePreferences}
             onBack={() => setPage("home")}
+            onLogout={handleLogout}
             t={t}
           />
         )}

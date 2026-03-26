@@ -33,8 +33,6 @@ def upsert_day_entry_from_sessions(db: Session, user_id: int, target_date: date)
         )
         db.add(entry)
     else:
-        # Keep the raw tracked total in sync with sessions while preserving
-        # any manual override/status/note the user has applied for that day.
         entry.computed_seconds = int(total)
 
     db.commit()

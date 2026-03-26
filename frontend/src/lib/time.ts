@@ -5,13 +5,6 @@ export function formatDuration(total: number) {
   return `${h}:${m}:${s}`;
 }
 
-export function formatDisplayHHMM(total: number) {
-  const displayTotal = total <= 0 ? 0 : Math.max(total, 60);
-  const h = String(Math.floor(displayTotal / 3600)).padStart(2, "0");
-  const m = String(Math.floor((displayTotal % 3600) / 60)).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function parseHHMMToSeconds(value: string): number | null {
